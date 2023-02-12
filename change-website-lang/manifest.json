@@ -1,0 +1,27 @@
+{
+  "name": "Change language",
+  "description": "Change languages with locales in websites.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://learn.microsoft.com/*",
+    "https://docs.github.com/*"
+  ],
+  "action": {
+    "default_title": "Change languages"
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}
