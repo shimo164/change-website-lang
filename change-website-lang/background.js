@@ -1,49 +1,46 @@
+// Dictionaries for locale mapping
+const localeMapping = {
+  '/en-us/': '/ja-jp/',
+  '/ja-jp/': '/en-us/',
+  '/en/': '/ja/',
+  '/ja/': '/en/',
+};
+
+async function changeCurrentTab(offset) {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const url = tabs[0].url;
+
+  for (const [locale, replacement] of Object.entries(localeMapping)) {
+    if (url.includes(locale)) {
+      const nextUrl = url.replace(locale, replacement);
+
+      // Update URL and scroll page after URL changes
+      chrome.tabs.update(tabs[0].id, { url: nextUrl }, () => {
+        // Add event listener for tab update only when we have an offset
+        if (offset !== 0) {
+          chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+            if (tabId === tabs[0].id && changeInfo.status === 'complete') {
+              chrome.scripting.executeScript({
+                target: { tabId },
+                func: scrollPage,
+                args: [offset],
+              });
+            }
+          });
+        }
+      });
+
+      return;
+    }
+  }
+}
+
 function getOffset() {
   return window.pageYOffset;
 }
 
 function scrollPage(offset) {
   window.scrollTo({ left: 0, top: offset });
-}
-
-async function changeCurrentTab() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const url = tabs[0].url;
-  const locale1 = '/en-us/';
-  const locale2 = '/ja-jp/';
-  const locale3 = '/en/';
-  const locale4 = '/ja/';
-
-  let nextUrl = '';
-  if (url.search(locale1) !== -1) {
-    nextUrl = url.replace(locale1, locale2);
-  } else if (url.search(locale2) !== -1) {
-    nextUrl = url.replace(locale2, locale1);
-  } else if (url.search(locale3) !== -1) {
-    nextUrl = url.replace(locale3, locale4);
-  } else if (url.search(locale4) !== -1) {
-    nextUrl = url.replace(locale4, locale3);
-  } else {
-    // No locale match, do nothing.
-    return;
-  }
-  chrome.tabs.update({ url: nextUrl });
-}
-
-function scrollPageAfterUrlChange(offset) {
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (offset === 0) {
-      return;
-    }
-    if (changeInfo.status === 'complete') {
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: scrollPage,
-        args: [offset],
-      });
-      offset = 0;
-    }
-  });
 }
 
 const extensionIconClickListener = (tab) => {
@@ -55,8 +52,7 @@ const extensionIconClickListener = (tab) => {
     (injectionResults) => {
       const offset = injectionResults[0].result;
 
-      changeCurrentTab();
-      scrollPageAfterUrlChange(offset);
+      changeCurrentTab(offset);
     },
   );
 };
