@@ -1,62 +1,92 @@
-function getOffset() {
-  return window.pageYOffset;
-}
+const LOCALE_MAPPING = {
+  '/en-us/': '/ja-jp/',
+  '/ja-jp/': '/en-us/',
+  '/en/': '/ja/',
+  '/ja/': '/en/',
+};
 
-function scrollPage(offset) {
-  window.scrollTo({ left: 0, top: offset });
-}
+const ALLOWED_URLS = ['https://learn.microsoft.com', 'https://docs.github.com'];
 
-async function changeCurrentTab() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const url = tabs[0].url;
-  const locale1 = '/en-us/';
-  const locale2 = '/ja-jp/';
-  const locale3 = '/en/';
-  const locale4 = '/ja/';
-
-  let nextUrl = '';
-  if (url.search(locale1) !== -1) {
-    nextUrl = url.replace(locale1, locale2);
-  } else if (url.search(locale2) !== -1) {
-    nextUrl = url.replace(locale2, locale1);
-  } else if (url.search(locale3) !== -1) {
-    nextUrl = url.replace(locale3, locale4);
-  } else if (url.search(locale4) !== -1) {
-    nextUrl = url.replace(locale4, locale3);
-  } else {
-    // No locale match, do nothing.
-    return;
+function getReplacementUrl(url) {
+  for (const [locale, replacement] of Object.entries(LOCALE_MAPPING)) {
+    if (url.includes(locale)) {
+      return url.replace(locale, replacement);
+    }
   }
-  chrome.tabs.update({ url: nextUrl });
+
+  return null;
 }
 
-function scrollPageAfterUrlChange(offset) {
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (offset === 0) {
-      return;
-    }
-    if (changeInfo.status === 'complete') {
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: scrollPage,
-        args: [offset],
-      });
-      offset = 0;
-    }
+function hasPermission(url, callback) {
+  chrome.permissions.contains(
+    {
+      origins: [new URL(url).origin + '/*'],
+    },
+    callback,
+  );
+}
+
+function setScrollOffset(tabId, offset) {
+  chrome.scripting.executeScript({
+    target: { tabId },
+    func: (offset) => {
+      localStorage.setItem('scrollOffset', offset);
+      localStorage.setItem('programmaticURLChange', 'true');
+    },
+    args: [offset],
   });
 }
+
+async function changeCurrentTab(offset) {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const replacementUrl = getReplacementUrl(tabs[0].url);
+
+  if (replacementUrl) {
+    hasPermission(replacementUrl, (hasPermissions) => {
+      if (hasPermissions) {
+        setScrollOffset(tabs[0].id, offset);
+        chrome.tabs.update(tabs[0].id, { url: replacementUrl });
+      }
+    });
+  }
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (
+    changeInfo.status === 'complete' &&
+    ALLOWED_URLS.some((allowedUrl) => tab.url.includes(allowedUrl))
+  ) {
+    chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const programmaticURLChange = localStorage.getItem(
+          'programmaticURLChange',
+        );
+
+        if (programmaticURLChange) {
+          window.scrollTo({
+            left: 0,
+            top: localStorage.getItem('scrollOffset'),
+          });
+
+          localStorage.removeItem('programmaticURLChange');
+          localStorage.removeItem('scrollOffset');
+        } else {
+          window.scrollTo(0, 0);
+        }
+      },
+    });
+  }
+});
 
 const extensionIconClickListener = (tab) => {
   chrome.scripting.executeScript(
     {
       target: { tabId: tab.id },
-      func: getOffset,
+      func: () => window.pageYOffset,
     },
     (injectionResults) => {
-      const offset = injectionResults[0].result;
-
-      changeCurrentTab();
-      scrollPageAfterUrlChange(offset);
+      changeCurrentTab(injectionResults[0].result);
     },
   );
 };
