@@ -39,6 +39,9 @@ function setScrollOffset(tabId, offset) {
 
 async function changeCurrentTab(offset) {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tabs.length === 0) {
+    return;
+  }
   const replacementUrl = getReplacementUrl(tabs[0].url);
 
   if (replacementUrl) {
@@ -80,15 +83,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 const extensionIconClickListener = (tab) => {
-  chrome.scripting.executeScript(
-    {
+  chrome.scripting
+    .executeScript({
       target: { tabId: tab.id },
       func: () => window.pageYOffset,
-    },
-    (injectionResults) => {
+    })
+    .then((injectionResults) => {
       changeCurrentTab(injectionResults[0].result);
-    },
-  );
+    })
+    .catch((error) => {
+      console.log('Error executing script: ', error);
+    });
 };
 
 chrome.action.onClicked.addListener(extensionIconClickListener);
