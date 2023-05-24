@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Extension Options</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f9f9f9;
+        color: #333;
+      }
+      h1 {
+        background-color: #4c8bf5;
+        color: #fff;
+        padding: 10px 20px;
+        margin: 0;
+        font-size: 20px;
+      }
+      p {
+        padding: 10px 20px;
+        line-height: 1.6;
+      }
+      textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #4c8bf5;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        margin: 0 20px;
+        border-radius: 3px;
+      }
+      button:hover {
+        background-color: #3b7cd3;
+      }
+      #saveMessage {
+        color: green;
+        padding: 0 20px;
+      }
+      .textarea-container {
+        padding: 0 20px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Options setting</h1>
+    <p>
+      Enter the root URLs and two corresponding locales that you wish to toggle
+      between.
+      <br />
+      Example: <b>https://learn.microsoft.com, en-us, ja-jp</b>
+      <br />
+      In this case, any URL starting with https://learn.microsoft.com will
+      switch between the en-us and ja-jp locales.
+      <br />
+      Please ensure to separate each URL and locale pair with a comma and each
+      pair should be on a new line.
+    </p>
+    <div class="textarea-container">
+      <textarea id="targetInfo" rows="10"></textarea>
+    </div>
+    <button id="saveButton">Save</button>
+    <p id="saveMessage"></p>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,29 +1,34 @@
-const LOCALE_MAPPING = {
-  '/en-us/': '/ja-jp/',
-  '/ja-jp/': '/en-us/',
-  '/en/': '/ja/',
-  '/ja/': '/en/',
-};
+let TARGET_INFO = [];
 
-const ALLOWED_URLS = ['https://learn.microsoft.com', 'https://docs.github.com'];
+// Function to update TARGET_INFO from chrome.storage
+function updateTargetInfo() {
+  chrome.storage.local.get(['target_info'], function (result) {
+    if (result.target_info) {
+      TARGET_INFO = result.target_info.split('\n').map((line) => {
+        const [url, ...locales] = line.split(',').map((str) => str.trim());
+        return { url, locales };
+      });
+    }
+  });
+}
+
+// Call updateTargetInfo to initially populate TARGET_INFO
+updateTargetInfo();
 
 function getReplacementUrl(url) {
-  for (const [locale, replacement] of Object.entries(LOCALE_MAPPING)) {
-    if (url.includes(locale)) {
-      return url.replace(locale, replacement);
+  for (const target of TARGET_INFO) {
+    if (url.includes(target.locales[0])) {
+      return url.replace(target.locales[0], target.locales[1]);
+    }
+    if (url.includes(target.locales[1])) {
+      return url.replace(target.locales[1], target.locales[0]);
     }
   }
-
   return null;
 }
 
-function hasPermission(url, callback) {
-  chrome.permissions.contains(
-    {
-      origins: [new URL(url).origin + '/*'],
-    },
-    callback,
-  );
+function isInTarget(url) {
+  return url && TARGET_INFO.some((target) => url.startsWith(target.url));
 }
 
 function setScrollOffset(tabId, offset) {
@@ -42,22 +47,21 @@ async function changeCurrentTab(offset) {
   if (tabs.length === 0) {
     return;
   }
+
   const replacementUrl = getReplacementUrl(tabs[0].url);
 
-  if (replacementUrl) {
-    hasPermission(replacementUrl, (hasPermissions) => {
-      if (hasPermissions) {
-        setScrollOffset(tabs[0].id, offset);
-        chrome.tabs.update(tabs[0].id, { url: replacementUrl });
-      }
-    });
+  const isInTargets = isInTarget(replacementUrl);
+
+  if (isInTargets && replacementUrl) {
+    setScrollOffset(tabs[0].id, offset);
+    chrome.tabs.update(tabs[0].id, { url: replacementUrl });
   }
 }
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (
     changeInfo.status === 'complete' &&
-    ALLOWED_URLS.some((allowedUrl) => tab.url.includes(allowedUrl))
+    TARGET_INFO.some((target) => tab.url.includes(target.url))
   ) {
     chrome.scripting.executeScript({
       target: { tabId },
