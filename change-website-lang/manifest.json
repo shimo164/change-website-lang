@@ -6,6 +6,7 @@
   "background": {
     "service_worker": "background.js"
   },
+  "options_page": "options.html",
   "permissions": [
     "activeTab",
     "scripting",
@@ -13,8 +14,8 @@
     "storage"
   ],
   "host_permissions": [
-    "https://learn.microsoft.com/*",
-    "https://docs.github.com/*"
+    "https://*/*",
+    "http://*/*"
   ],
   "action": {
     "default_title": "Change languages"
