@@ -1,7 +1,6 @@
 // Update the TARGET_INFO in the background page
 function updateBackgroundPage() {
-  const backgroundPage = chrome.extension.getBackgroundPage();
-  backgroundPage.updateTargetInfo();
+  chrome.runtime.sendMessage({ command: 'updateTargetInfo' });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
