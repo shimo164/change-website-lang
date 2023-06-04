@@ -101,3 +101,9 @@ const extensionIconClickListener = (tab) => {
 };
 
 chrome.action.onClicked.addListener(extensionIconClickListener);
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.command === 'updateTargetInfo') {
+    updateTargetInfo();
+  }
+});
