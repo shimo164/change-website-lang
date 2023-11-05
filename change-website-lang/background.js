@@ -16,19 +16,24 @@ function updateTargetInfo() {
 updateTargetInfo();
 
 function toggleAwsDocLocale(url, langCode) {
+  const [baseUrl, fragment] = url.split('#');
   const langPath = `/${langCode}/`;
-  if (url.includes(langPath)) {
-    return url.replace(langPath, '/');
+
+  let newUrl = baseUrl;
+
+  if (baseUrl.includes(langPath)) {
+    newUrl = baseUrl.replace(langPath, '/');
   } else {
     // If no language path in URL, switch from English to the specified language
-    const pathMatch = url.match(
+    const pathMatch = baseUrl.match(
       new RegExp(`https://docs\\.aws\\.amazon\\.com/(.*?)/(.*)`),
     );
     if (pathMatch) {
-      return `https://docs.aws.amazon.com/${langCode}/${pathMatch[1]}/${pathMatch[2]}`;
+      newUrl = `https://docs.aws.amazon.com/${langCode}/${pathMatch[1]}/${pathMatch[2]}`;
     }
   }
-  return url;
+
+  return fragment ? `${newUrl}#${fragment}` : newUrl;
 }
 
 function getReplacementUrl(url) {
@@ -85,32 +90,35 @@ async function changeCurrentTab(offset) {
 
 // Event listener for when a tab is updated
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (
-    changeInfo.status === 'complete' &&
-    tab.url &&
-    !tab.url.startsWith('chrome://') &&
-    TARGET_INFO.some((target) => tab.url.includes(target.url))
-  ) {
-    chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const programmaticURLChange = localStorage.getItem(
-          'programmaticURLChange',
-        );
+  // Ensure we're not reacting to in-page (hash) navigation:
+  if (changeInfo.url && !changeInfo.url.includes('#')) {
+    if (
+      changeInfo.status === 'complete' &&
+      tab.url &&
+      !tab.url.startsWith('chrome://') &&
+      TARGET_INFO.some((target) => tab.url.includes(target.url))
+    ) {
+      chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          const programmaticURLChange = localStorage.getItem(
+            'programmaticURLChange',
+          );
 
-        if (programmaticURLChange) {
-          window.scrollTo({
-            left: 0,
-            top: localStorage.getItem('scrollOffset'),
-          });
+          if (programmaticURLChange) {
+            window.scrollTo({
+              left: 0,
+              top: localStorage.getItem('scrollOffset'),
+            });
 
-          localStorage.removeItem('programmaticURLChange');
-          localStorage.removeItem('scrollOffset');
-        } else {
-          window.scrollTo(0, 0);
-        }
-      },
-    });
+            localStorage.removeItem('programmaticURLChange');
+            localStorage.removeItem('scrollOffset');
+          } else {
+            window.scrollTo(0, 0);
+          }
+        },
+      });
+    }
   }
 });
 
