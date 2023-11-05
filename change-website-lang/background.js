@@ -15,6 +15,22 @@ function updateTargetInfo() {
 // Call updateTargetInfo to initially populate TARGET_INFO
 updateTargetInfo();
 
+function toggleAwsDocLocale(url, langCode) {
+  const langPath = `/${langCode}/`;
+  if (url.includes(langPath)) {
+    return url.replace(langPath, '/');
+  } else {
+    // If no language path in URL, switch from English to the specified language
+    const pathMatch = url.match(
+      new RegExp(`https://docs\\.aws\\.amazon\\.com/(.*?)/(.*)`),
+    );
+    if (pathMatch) {
+      return `https://docs.aws.amazon.com/${langCode}/${pathMatch[1]}/${pathMatch[2]}`;
+    }
+  }
+  return url;
+}
+
 function getReplacementUrl(url) {
   for (const target of TARGET_INFO) {
     if (url.includes(target.locales[0])) {
@@ -24,13 +40,21 @@ function getReplacementUrl(url) {
       return url.replace(target.locales[1], target.locales[0]);
     }
   }
+  const langCode = 'ja_jp';
+
+  if (url.startsWith('https://docs.aws.amazon.com')) {
+    return toggleAwsDocLocale(url, langCode);
+  }
+
   return null;
 }
 
+// This function checks if the URL is one of the targets
 function isInTarget(url) {
   return url && TARGET_INFO.some((target) => url.startsWith(target.url));
 }
 
+// This function sets the scroll offset in localStorage
 function setScrollOffset(tabId, offset) {
   chrome.scripting.executeScript({
     target: { tabId },
@@ -42,6 +66,7 @@ function setScrollOffset(tabId, offset) {
   });
 }
 
+// This function changes the current tab's URL
 async function changeCurrentTab(offset) {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tabs.length === 0) {
@@ -58,9 +83,12 @@ async function changeCurrentTab(offset) {
   }
 }
 
+// Event listener for when a tab is updated
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (
     changeInfo.status === 'complete' &&
+    tab.url &&
+    !tab.url.startsWith('chrome://') &&
     TARGET_INFO.some((target) => tab.url.includes(target.url))
   ) {
     chrome.scripting.executeScript({

@@ -1,5 +1,8 @@
 # change-website-lang
 
+## Notice
+- Beta: Locale in AWS document <https://docs.aws.amazon.com> is changed from english to japanese. Before start, set the locale of the doc page to English. (hard coded as `const langCode = 'ja_jp';`)
+
 ## About
 - Chrome extension for quickly switching between two locales on any given website.
 - The scroll position is retained when switching between locales.
